@@ -1,17 +1,13 @@
-// Código JavaScript extraído y corregido del HTML proporcionado.
-// Nota: Este código asume que se ejecuta en un entorno con acceso a DOM (como un navegador web).
-// Se ha corregido un error de sintaxis en la línea original: if (codigoAFila[codigo] !== ) { ahora es !== undefined.
-// También se ha estructurado para mayor claridad, pero mantiene la funcionalidad original.
-
+// Variables globales para el inventario
 let inventario = JSON.parse(localStorage.getItem('inventario')) || [];
 let codigoAFila = {};
 
-// Inicializar mapeo
+// Inicializar mapeo de códigos
 inventario.forEach((item, index) => {
     codigoAFila[item.codigo] = index;
 });
 
-// Inicializar QuaggaJS (requiere que el elemento #interactive esté en el DOM)
+// Inicializar QuaggaJS para escaneo de códigos de barras
 Quagga.init({
     inputStream: {
         name: "Live",
@@ -20,7 +16,7 @@ Quagga.init({
         constraints: {
             width: 640,
             height: 480,
-            facingMode: "environment" // Usar cámara trasera en móvil
+            facingMode: "environment" // Cámara trasera en móvil
         }
     },
     locator: {
@@ -29,7 +25,7 @@ Quagga.init({
     },
     numOfWorkers: 2,
     decoder: {
-        readers: ["code_128_reader", "ean_reader", "ean_8_reader", "code_39_reader", "upc_reader"] // Tipos comunes de códigos de barras
+        readers: ["code_128_reader", "ean_reader", "ean_8_reader", "code_39_reader", "upc_reader"]
     },
     locate: true
 }, function(err) {
@@ -40,24 +36,25 @@ Quagga.init({
     Quagga.start();
 });
 
-// Manejar detección
+// Evento cuando se detecta un código
 Quagga.onDetected(function(result) {
     let code = result.codeResult.code;
-    code = code.toUpperCase().replace(/[^A-Z0-9]/g, ''); // Limpiar y convertir a mayúsculas
+    code = code.toUpperCase().replace(/[^A-Z0-9]/g, ''); // Limpiar y mayúsculas
 
-    // Filtrar códigos que empiecen con B y tengan longitud adecuada
+    // Filtrar códigos válidos (empiezan con B y >=7 caracteres)
     if (!code.startsWith('B') || code.length < 7) return;
 
     procesarCodigo(code);
 });
 
+// Función para procesar un código (automático o manual)
 function procesarCodigo(codigo) {
     if (codigoAFila[codigo] !== undefined) {
-        // Marcar como encontrado (verde)
+        // Código encontrado: marcar en verde
         inventario[codigoAFila[codigo]].estado = 'encontrado';
         document.getElementById('result').innerHTML = `<p style="color: green;">✔ Código ${codigo} encontrado y marcado en verde.</p>`;
     } else {
-        // Agregar nuevo (morado)
+        // Código nuevo: agregar en morado
         inventario.push({ codigo: codigo, estado: 'nuevo' });
         codigoAFila[codigo] = inventario.length - 1;
         document.getElementById('result').innerHTML = `<p style="color: purple;">➕ Código nuevo agregado: ${codigo}</p>`;
@@ -66,6 +63,7 @@ function procesarCodigo(codigo) {
     actualizarTabla();
 }
 
+// Función para procesar código manual
 function procesarManual() {
     let codigo = document.getElementById('codigoManual').value.trim().toUpperCase();
     if (codigo) {
@@ -76,12 +74,13 @@ function procesarManual() {
     }
 }
 
+// Guardar inventario en localStorage (con backup)
 function guardarInventario() {
     localStorage.setItem('inventario', JSON.stringify(inventario));
-    // Crear "backup" guardando una copia en localStorage con timestamp
     localStorage.setItem('inventario_backup_' + Date.now(), JSON.stringify(inventario));
 }
 
+// Actualizar la tabla HTML con el inventario
 function actualizarTabla() {
     let tbody = document.querySelector('#inventarioTable tbody');
     tbody.innerHTML = '';
@@ -91,6 +90,7 @@ function actualizarTabla() {
     });
 }
 
+// Descargar inventario como Excel
 function descargarExcel() {
     let ws = XLSX.utils.json_to_sheet(inventario);
     let wb = XLSX.utils.book_new();
@@ -98,9 +98,9 @@ function descargarExcel() {
     XLSX.writeFile(wb, "inventario_actualizado.xlsx");
 }
 
+// Subir a SharePoint (reemplaza la URL)
 function subirSharePoint() {
-    // Placeholder: Reemplaza con tu URL de SharePoint
-    let sharePointUrl = 'https://ucceduco-my.sharepoint.com/:x:/r/personal/daniel_benjumea_ucc_edu_co/Documents/inventario%20-%20solo%20codigos.xlsx?d=wdb1f92c8b2f246599c69a9b22ccf2ac6&csf=1&web=1&e=ZzeydF'; // El usuario pone esto
+    let sharePointUrl = 'TU_HIPERVINCULO_DE_SHAREPOINT_AQUI'; // Pon tu URL aquí
     let data = JSON.stringify(inventario);
 
     fetch(sharePointUrl, {
@@ -123,5 +123,5 @@ function subirSharePoint() {
     });
 }
 
-// Inicializar tabla al cargar (llama esto después de que el DOM esté listo)
+// Inicializar tabla al cargar la página
 actualizarTabla();
